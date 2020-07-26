@@ -16,28 +16,37 @@
  */
 import { IMAGENET_CLASSES } from './imagenet_classes.js';
 
+function Deque() {
+    this.stac = null;
+    this.len = 0;
+    this.size = function() {
+        return this.len;
+    }
+
+    this.pushback = function(item) {
+        // return;
+        if (this.stac === null)
+            this.stac = item.expandDims(-1);
+        else {
+            let temp = tf.concat3d([this.stac, item.expandDims(-1)], 2);
+            this.stac.dispose();
+            this.stac = temp;
+        }
+        this.len += 1;
+    }
+
+    this.popfront = function() {
+        return;
+        this.len -= 1;
+        let stac2 = tf.slice3d(this.stac, [0, 0, 1], [64, 64, this.len]);
+        this.stac.dispose();
+        this.stac = stac2;
+    }
+}
+const buf = new Deque();
+
 
 $(() => {
-
-
-    function Deque() {
-        this.stac = [];
-        this.size = function() {
-            return this.stac.length;
-        }
-        this.popback = function() {
-            return this.stac.pop();
-        }
-        this.pushback = function(item) {
-            this.stac.push(item);
-        }
-        this.popfront = function() {
-            return this.stac.shift();
-        }
-        this.pushfront = function(item) {
-            this.stac.unshift(item);
-        }
-    }
 
     function ViewModel() {
         let self = this;
@@ -95,9 +104,12 @@ $(() => {
         // Make a prediction through the locally hosted cat.jpg.
         predictResult();
 
-        document.addEventListener("event", e => {
-            transformGrayScale(document.getElementById("canvas"));
-
+        document.addEventListener("event", async e => {
+            let grayImage = await transformGrayScale(document.getElementById("canvas"));
+            if (buf.len == 30)
+                buf.popfront();
+            buf.pushback(grayImage);
+            grayImage.dispose();
             predictResult();
         });
 
@@ -127,24 +139,25 @@ $(() => {
 
     async function transformGrayScale(imgElement) {
         // img will be in the form [1 w h 1]
+        let img2 = tf.tidy(() => {
+            let img = tf.browser.fromPixels(imgElement)
+                .mean(2)
+                .toFloat().div(tf.scalar(255.0));
 
-        let img = tf.browser.fromPixels(imgElement)
-            .mean(2)
-            .toFloat().div(tf.scalar(255.0));
+            const offset = tf.scalar(127.5);
+            img = img.expandDims(-1);
 
-        const offset = tf.scalar(127.5);
-        img = img.expandDims(-1);
+            img = tf.image.resizeBilinear(img, [64, 64]);
 
-        img = tf.image.resizeBilinear(img, [64, 64]);
-
-        img = img.squeeze(-1);
-
-        await tf.browser.toPixels(img, document.getElementById("canvas2"));
-
-        return img;
+            img = img.squeeze(-1);
+            return img;
+        });
+        await tf.browser.toPixels(img2, document.getElementById("canvas2"));
+        return img2;
     }
 
     async function predict(imgElement) {
+        console.log(buf.len + " " + tf.memory().numBytes / 1024 + "KB");
         status('Predicting...');
 
         // The first start time includes the time it takes to extract the image
@@ -179,7 +192,7 @@ $(() => {
      */
     async function getTopKClasses(logits, topK) {
         const values = await logits.data();
-
+        logits.dispose();
         const valuesAndIndices = [];
         for (let i = 0; i < values.length; i++) {
             valuesAndIndices.push({ value: values[i], index: i });
