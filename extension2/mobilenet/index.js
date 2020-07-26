@@ -25,18 +25,21 @@ function Deque() {
 
     this.pushback = function(item) {
         // return;
-        if (this.stac === null)
+        if (this.stac === null) {
             this.stac = item.expandDims(-1);
-        else {
-            let temp = tf.concat3d([this.stac, item.expandDims(-1)], 2);
+        } else {
+            let temp2 = [this.stac, item.expandDims(-1)];
+            let temp = tf.concat3d(temp2, 2);
+            temp2.forEach(v => v.dispose());
             this.stac.dispose();
             this.stac = temp;
         }
+        item.dispose();
         this.len += 1;
     }
 
     this.popfront = function() {
-        return;
+        // return;
         this.len -= 1;
         let stac2 = tf.slice3d(this.stac, [0, 0, 1], [64, 64, this.len]);
         this.stac.dispose();
