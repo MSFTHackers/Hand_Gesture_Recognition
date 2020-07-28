@@ -21,21 +21,29 @@ with open("jester-v1-labels.csv", "r") as csvfile:
 
 
 def perform_action(label):
+    ret = None
+    print("LABEL : {}".format(label))
     if "thumb" in label:
-        print("space")
-        press('space')
+        # print("space")
+        # press('space')
+        ret = 1
     elif "down" in label:
-        press('down') 
-        print('down') 
+        # press('down') 
+        # print('down')
+        ret = 1 
     elif "up" in label:
-        press('up')
-        print('up')
+        # press('up')
+        # print('up')
+        ret = 1
     elif "left" in label:
-        press("left")
-        print("left")
+        # press("left")
+        # print("left")
+        ret = 1
     elif "right" in label:
-        press("right")
-        print("right")
+        # press("right")
+        # print("right")
+        ret = 1
+    return ret
 
         
 
@@ -46,7 +54,7 @@ def getClassProbabilities(arr):
     res.sort(key = lambda e: e[1], reverse=True);
     return res[:5]
 
-
+             
 def modelTest(new_model, buf, frame):
     buf.addFrame(frame)
         # print(buf.size)
@@ -54,10 +62,11 @@ def modelTest(new_model, buf, frame):
     if buf.size == 30:
             intensor = buf.getTensor();
             intensor = tf.expand_dims(intensor, 0);
-            intensor = tf.expand_dims(intensor, -1);
             predictions = new_model.predict(intensor, steps=1)[0]
             class_probabilities = getClassProbabilities(predictions)
-            perform_action(class_probabilities[0][0].lower())
+            if perform_action(class_probabilities[0][0].lower()):
+                pass
+                # time.sleep(3) # to avoid false repeat 
     
 
 if __name__ == "__main__":
@@ -85,7 +94,7 @@ if __name__ == "__main__":
         # q is the quitting button
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
-        
+        time.sleep(0.1)
 
     vid.release()
     cv2.destroyAllWindows()

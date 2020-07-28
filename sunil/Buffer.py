@@ -13,8 +13,8 @@ class Buffer:
         #transform image to 64x64 2d tensor
         frame = cv2.resize(img, (64, 64))
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY);
-        rgb_tensor = tf.convert_to_tensor(frame, dtype=tf.float32)
-
+        rgb_tensor = tf.expand_dims(tf.convert_to_tensor(frame, dtype=tf.float32), -1)
+        rgb_tensor = tf.image.per_image_standardization(rgb_tensor)
         return rgb_tensor
 
 
@@ -30,8 +30,8 @@ class Buffer:
         self.size += 1
 
     def popFront(self):
-        self._stack = tf.slice(self._stack, [1, 0, 0], [30, 64, 64]);
-        # print(self._stack.shape);
+        self._stack = tf.slice(self._stack, [1, 0, 0, 0], [30, 64, 64, 1]);
+        print(self._stack.shape);
         self.size -= 1
 
     def addFrame(self, img):
