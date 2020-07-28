@@ -13,6 +13,7 @@ import threading
 
 
 LABELS = []
+DUR = 5
 
 with open("jester-v1-labels.csv", "r") as csvfile:
     csv_data = csv.reader(csvfile, delimiter=',')
@@ -55,19 +56,30 @@ def getClassProbabilities(arr):
     return res[:5]
 
              
-def modelTest(new_model, buf, frame):
+def modelTest(new_model, buf, frame, CNT, RESLABELS):
     buf.addFrame(frame)
-        # print(buf.size)
+    # print(buf.size)
 
     if buf.size == 30:
             intensor = buf.getTensor();
             intensor = tf.expand_dims(intensor, 0);
             predictions = new_model.predict(intensor, steps=1)[0]
-            class_probabilities = getClassProbabilities(predictions)
-            if perform_action(class_probabilities[0][0].lower()):
-                pass
-                # time.sleep(3) # to avoid false repeat 
+            predictions = getClassProbabilities(predictions);
+            # print(predictions)
+            predicted_label = predictions[0][0].lower();
     
+            if predicted_label in RESLABELS.keys():
+                RESLABELS[predicted_label] += 1
+            else:
+                RESLABELS[predicted_label] = 1
+            
+            if CNT == DUR:
+                print("{}".format([e[0] for e in sorted(list(RESLABELS.items()), key=lambda e: e[1],reverse=True)[:5]]))
+                # print(sorted(list(RESLABELS.items()), key=lambda e: e[1],reverse=True)[0][0])
+            # if perform_action(class_probabilities[0][0].lower()):
+            #     pass
+                # time.sleep(3) # to avoid false repeat 
+           
 
 if __name__ == "__main__":
     # print(tf.version.VERSION)
@@ -82,10 +94,20 @@ if __name__ == "__main__":
 
     # Show the model architecture
     # new_model.summary()
+    RESLABELS = {}
+    CNT = 0
 
     while True:
         ret, frame = vid.read()
-        x = threading.Thread(target=modelTest, args=(new_model, buf, frame))
+       
+        x = threading.Thread(target=modelTest, args=(new_model, buf, frame, CNT, RESLABELS))
+        if buf.size == 30:
+            CNT += 1
+            # buf.clear();
+        if CNT > DUR:
+            CNT = 0
+            RESLABELS = {}
+           
         x.start()
         frame2 = cv2.flip(frame, 1)
         cv2.imshow('frame', frame2)
@@ -94,7 +116,7 @@ if __name__ == "__main__":
         # q is the quitting button
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
-        time.sleep(0.1)
+        # time.sleep(0.01)
 
     vid.release()
     cv2.destroyAllWindows()

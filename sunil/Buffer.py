@@ -30,17 +30,22 @@ class Buffer:
         self.size += 1
 
     def popFront(self):
+        # pass
         self._stack = tf.slice(self._stack, [1, 0, 0, 0], [30, 64, 64, 1]);
-        print(self._stack.shape);
+        # print(self._stack.shape);
         self.size -= 1
 
+    def clear(self):
+        self._stack = None
+        self.size = 0
+        
     def addFrame(self, img):
         self.pushBack(img)
         if self.size >= 31:
             self.popFront()
 
     def getTensor(self):
-        #create 3d tensor from the buffer
+        #create tensor from the buffer
         return self._stack
 
         
